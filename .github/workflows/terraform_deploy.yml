@@ -1,0 +1,41 @@
+name: Terraform Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.14.11
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
+
+    - name: Get public IP
+      run: echo "Public IP: ${{ steps.set-outputs.outputs.public_ip }}"
+      id: set-outputs
+      env:
+        TF_STATE: ${{ secrets.TF_STATE }}
+
+    - name: Deploy to EC2
+      run: |
+        PUBLIC_IP=$(terraform output -json public_ip | jq -r '.')
+        echo "Deploying to EC2 at $PUBLIC_IP"
+        # Puedes agregar comandos adicionales para el despliegue, como copiar archivos, etc.
+
+    - name: Terraform Destroy (cleanup)
+      if: always()
+      run: terraform destroy -auto-approve
